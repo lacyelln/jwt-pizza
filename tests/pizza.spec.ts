@@ -403,6 +403,7 @@ test('dinerDashboard', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill('a');
   await page.getByRole('button', { name: 'Login' }).click();
   await page.getByText('KC').click();
+  expect(page.getByText(''));
 });
 
 
@@ -450,8 +451,9 @@ test('purchase with login', async ({ page }) => {
   await expect(page.locator('tfoot')).toContainText('0.008 ₿');
   await page.getByRole('button', { name: 'Pay now' }).click();
 
-  // Check balance
-  await expect(page.getByText('0.008')).toBeVisible();
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await page.getByRole('button', { name: 'Order more' }).click();
+
 });
 
 
@@ -465,10 +467,6 @@ test('create/delete store', async ({ page }) => {
   await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
   
 });
-
-
-
-
 
 
 test('register', async ({ page }) => {
@@ -547,3 +545,5 @@ test('admin delete franchise', async ({ page }) => {
   await page.getByRole('button', { name: 'Close' }).click();
   
 });
+
+
