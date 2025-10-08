@@ -457,21 +457,13 @@ test('purchase with login', async ({ page }) => {
 
 test('create/delete store', async ({ page }) => {
   await basicInitFranchise(page);
-  //await page.goto('http://localhost:5173/');
   await page.getByRole('link', { name: 'Login' }).click();
   await page.getByRole('textbox', { name: 'Email address' }).fill('f@jwt.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('franchisee');
   await page.getByRole('button', { name: 'Login' }).click();
   await page.waitForTimeout(1000);
-  // await page.getByText('pf').click();
   await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
-  // await page.waitForTimeout(1000);
-  // await page.getByRole('button', { name: 'Close' }).nth(1).click();
-  // await page.getByRole('button', { name: 'Close' }).click();
-  // await page.getByRole('button', { name: 'Create store' }).click();
-  // await page.getByRole('textbox', { name: 'store name' }).click();
-  // await page.getByRole('textbox', { name: 'store name' }).fill('hello again');
-  // await page.getByRole('button', { name: 'Create' }).click();
+  
 });
 
 
