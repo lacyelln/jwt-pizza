@@ -377,6 +377,9 @@ await page.route('*/**/api/order', async (route) => {
 test('login', async ({ page }) => {
   await basicInitDiner(page);
   await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('fake@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('wrongpassword');
+  await page.getByRole('button', { name: 'Login' }).click();
   await page.getByRole('textbox', { name: 'Email address' }).fill('d@jwt.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('a');
   await page.getByRole('button', { name: 'Login' }).click();
