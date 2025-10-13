@@ -2,6 +2,7 @@ import { test, expect } from 'playwright-test-coverage';
 import { Page } from "@playwright/test";
 import {Role, User} from "../src/service/pizzaService";
 
+
 async function basicInitAdmin(page: Page) {
   let loggedInUser: User | undefined;
   const validUsers: Record<string, User> = { 'a@jwt.com': { id: '4', name: 'a', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] }};
@@ -198,41 +199,72 @@ test('updateUser', async ({ page }) => {
     
 });
 
-test('getList', async ({ page })=> {
-    // Mock the PUT request to update the user
-    await page.route('**/api/user/*', async (route) => {
-    const request = route.request();
+test('admin dashboard deletes a user', async ({ page }) => {
+  // --- Mock GET /api/user?page=1&limit=10&name=* ---
+  await page.route('**/api/user?page=1&limit=10&name=*', async (route) => {
+    console.log('Mocked GET users:', route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        users: [
+          { id: 1, name: 'User One', email: 'user1@test.com', roles: ['diner'] },
+          { id: 2, name: 'User Two', email: 'user2@test.com', roles: ['diner'] },
+          { id: 3, name: 'joe', email: 'j@test.com', roles: ['diner']}
+        ],
+      }),
+    });
+  });
 
-    if (request.method() === 'PUT') {
-
-        // You can log or inspect the payload if needed
-        const data = await request.postDataJSON();
-
-        // Respond with a fake updated user + token, same shape as your backend would
-        await route.fulfill({
+  // --- Mock DELETE /api/user/:id ---
+  await page.route('**/api/user/*', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      console.log('Mocked DELETE:', route.request().url());
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-            user: {
-            id: data.id,
-            name: data.name,
-            email: data.email,
-            roles: data.roles,
-            },
-            token: 'mocked-jwt-token',
-        }),
-        });
-    } else {
-        await route.continue();
+        body: JSON.stringify({ message: 'User deleted' }),
+      });
+      return;
     }
+    await route.continue();
+  });
+
+  // --- Mock franchises API so dashboard loads ---
+  await page.route('**/api/franchise**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ franchises: [], more: false }),
     });
+  });
 
-    await basicInitAdmin(page);
-    await page.getByRole('link', { name: 'Login' }).click();
-    await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
-    await page.getByRole('textbox', { name: 'Password' }).fill('admin');
-    await page.getByRole('button', { name: 'Login' }).click();
-    await page.getByRole('link', { name: 'Admin', exact: true }).click();
+  // --- Navigate and log in ---
+  await basicInitAdmin(page);
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('admin');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('link', { name: 'Admin', exact: true }).click();
 
-})
+  // --- Wait for mocked users to render ---
+  await expect(page.getByText('User One')).toBeVisible();
+  await expect(page.getByText('User Two')).toBeVisible();
 
+  // --- Click Delete for User One ---
+  const userOneRow = page.getByRole('row', {
+    name: /User One\s+user1@test\.com\s+diner/i,
+  });
+  await userOneRow.getByRole('button', { name: 'Delete' }).click();
+
+  // --- Verify the user disappears ---
+  await expect(page.getByText('User One')).not.toBeVisible();
+  await expect(page.getByText('User Two')).toBeVisible();
+
+  // --- Type "joe" into the Name search input ---
+  await page.getByPlaceholder('Name').fill('joe');
+
+  // --- Click the Search button next to it ---
+  await page.getByRole('button', { name: 'Search' }).click();
+  await expect(page.getByText('joe')).toBeVisible();
+});
