@@ -59,10 +59,24 @@ class HttpPizzaService implements PizzaService {
   }
 
   async updateUser(updatedUser: User): Promise<User> {
-    const { user, token } = await this.callEndpoint(`/api/user/${updatedUser.id}`, 'PUT', updatedUser);
-    localStorage.setItem('token', token);
+  const { user, token } = await this.callEndpoint(`/api/user/${updatedUser.id}`, 'PUT', updatedUser);
+  localStorage.setItem('token', token);
   return Promise.resolve(user);
 }
+
+  // added this for new functionality in deliverable 5
+  async getUserList(): Promise<User[]> {
+  const response = await this.callEndpoint(`/api/user?page=1&limit=10&name=*`, 'GET');
+  console.log("🧩 Raw response from backend:", JSON.stringify(response, null, 2));
+
+  return Promise.resolve(response.users || response); // fallback for debugging
+}
+
+
+  deleteUser(user: User): void {
+  this.callEndpoint(`/api/user/${user.id}`, 'DELETE');
+}
+
 
   async getUser(): Promise<User | null> {
     let result: User | null = null;

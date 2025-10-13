@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import View from './view';
 import { useNavigate } from 'react-router-dom';
 import NotFound from './notFound';
@@ -7,15 +7,72 @@ import { pizzaService } from '../service/service';
 import { Franchise, FranchiseList, Role, Store, User } from '../service/pizzaService';
 import { TrashIcon } from '../icons';
 
+
 interface Props {
   user: User | null;
 }
 
 export default function AdminDashboard(props: Props) {
   const navigate = useNavigate();
+  const user = props.user || ({} as User);
   const [franchiseList, setFranchiseList] = React.useState<FranchiseList>({ franchises: [], more: false });
   const [franchisePage, setFranchisePage] = React.useState(0);
   const filterFranchiseRef = React.useRef<HTMLInputElement>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 8;
+
+  // ✅ Fetch users from backend
+  async function getUserList() {
+    try {
+      const allUsers = await pizzaService.getUserList();
+      setUsers(allUsers);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
+  }
+
+  // ✅ Delete user via service call
+  async function removeUser(user: User) {
+    try {
+      await pizzaService.deleteUser(user);
+      setUsers((prev) => prev.filter((u) => u.email !== user.email));
+    } catch (err) {
+      console.error("Error deleting user:", err);
+    }
+  }
+
+    // load users on mount
+  useEffect(() => {
+    getUserList();
+  }, []);
+
+  // filter users by name (case-insensitive)
+  const filtered = users.filter((u) =>
+    (u.name ?? "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  // pagination
+  const start = page * pageSize;
+  const end = start + pageSize;
+  const paginated = filtered.slice(start, end);
+
+
+  
+  // const [users, setUsers] = useState([
+  //   { name: "Joe", email: "j@jwt.com", role: "admin" },
+  //   { name: "Betty", email: "b@jwt.com", role: "diner" },
+  //   { name: "Sam", email: "s@cow.io", role: "diner" },
+  //   { name: "常用名字", email: "常@my.io", role: "diner" },
+  //   { name: "Diner", email: "d@ms.com", role: "franchisee" },
+  //   { name: "Franco", email: "f@ms.com", role: "diner" },
+  //   { name: "Buddy", email: "b@byu.edu", role: "franchisee" },
+  //   { name: "Mac", email: "ch@byu.edu", role: "admin" },
+  //   { name: "Juan", email: "j@gmail.com", role: "diner" },
+  //   { name: "Jamie", email: "jm@jwt.com", role: "diner" },
+  // ]);
+
 
   React.useEffect(() => {
     (async () => {
@@ -39,10 +96,93 @@ export default function AdminDashboard(props: Props) {
     setFranchiseList(await pizzaService.getFranchises(franchisePage, 10, `*${filterFranchiseRef.current?.value}*`));
   }
 
+  
   let response = <NotFound />;
   if (Role.isRole(props.user, Role.Admin)) {
     response = (
       <View title="Mama Ricci's kitchen">
+          <div className="bg-slate-600 min-h-screen flex items-center justify-center">
+            <div className="bg-slate-700 text-white p-4 w-[400px] rounded-lg shadow-md">
+      <h2 className="text-lg font-semibold mb-2">Users</h2>
+      <div className="overflow-x-auto bg-white rounded text-black">
+        <table className="min-w-full divide-y divide-gray-300">
+          <thead className="bg-gray-200 text-gray-700 text-sm">
+            <tr>
+              <th className="px-3 py-2 text-left font-semibold">Name</th>
+              <th className="px-3 py-2 text-left font-semibold">Email</th>
+              <th className="px-3 py-2 text-left font-semibold">Role</th>
+              <th className="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginated.map((user, i) => (
+              <tr
+                key={i}
+                className="border-t border-gray-200 hover:bg-gray-100 transition"
+              >
+                <td className="px-3 py-1">{user.name}</td>
+                <td className="px-3 py-1">{user.email}</td>
+                <td>
+                  {user.roles?.map((role) => (
+                    <span
+                      key={String(role)}
+                      className="inline-block bg-gray-200 text-gray-700 rounded px-2 py-0.5 text-xs mr-1"
+                    >
+                      {String(role)}
+                    </span>
+                  )) ?? "No roles"}
+                </td>
+                <td className="px-3 py-1 text-center">
+                  <button
+                  onClick={() => removeUser(user)}
+                  className="text-red-500 hover:text-red-700 font-semibold"
+                >
+                  Delete
+                </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Search + Pagination */}
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Name"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+          />
+          <button
+            onClick={() => setPage(0)}
+            className="bg-gray-200 px-2 py-1 text-sm rounded hover:bg-gray-300"
+          >
+            Search
+          </button>
+        </div>
+        <div className="flex gap-1">
+          <button
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+            className="bg-gray-200 px-2 py-1 text-sm rounded hover:bg-gray-300 disabled:bg-gray-100"
+          >
+            Prev
+          </button>
+          <button
+            disabled={end >= filtered.length}
+            onClick={() => setPage(page + 1)}
+            className="bg-gray-200 px-2 py-1 text-sm rounded hover:bg-gray-300 disabled:bg-gray-100"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+</div>
+
         <div className="text-start py-8 px-4 sm:px-6 lg:px-8">
           <h3 className="text-neutral-100 text-xl">Franchises</h3>
           <div className="bg-neutral-100 overflow-clip my-4">

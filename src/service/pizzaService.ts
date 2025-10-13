@@ -99,6 +99,8 @@ interface PizzaService {
   register(email: string, password: string, role: string): Promise<User>;
   logout(): void;
   updateUser(user: User): Promise<User>;
+  getUserList(): Promise<User[]>; //added this and delete user
+  deleteUser(user: User): void;
   getUser(): Promise<User | null>;
   getMenu(): Promise<Menu>;
   getOrders(user: User): Promise<OrderHistory>;
